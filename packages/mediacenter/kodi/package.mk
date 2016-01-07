@@ -17,13 +17,13 @@
 ################################################################################
 
 PKG_NAME="kodi"
-PKG_VERSION="16.0-rc3-34d1e49"
+PKG_VERSION="17.0-alpha1-7ca3fea"
 PKG_REV="1"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
 PKG_URL="$DISTRO_SRC/$PKG_NAME-$PKG_VERSION.tar.xz"
-PKG_DEPENDS_TARGET="toolchain kodi:host libsquish boost Python zlib bzip2 systemd pciutils lzo pcre swig:host libass curl rtmpdump fontconfig fribidi tinyxml libjpeg-turbo libpng tiff freetype jasper libogg libcdio libmpeg2 taglib libxml2 libxslt yajl sqlite libvorbis ffmpeg crossguid giflib"
+PKG_DEPENDS_TARGET="toolchain kodi:host libsquish Python zlib bzip2 systemd pciutils lzo pcre swig:host libass curl rtmpdump fontconfig fribidi tinyxml libjpeg-turbo libpng freetype libogg libcdio taglib libxml2 libxslt yajl sqlite libvorbis ffmpeg crossguid giflib"
 PKG_DEPENDS_HOST="lzo:host libpng:host libjpeg-turbo:host giflib:host"
 PKG_PRIORITY="optional"
 PKG_SECTION="mediacenter"
@@ -49,7 +49,7 @@ fi
 
 if [ ! "$OPENGL" = "no" ]; then
 # for OpenGL (GLX) support
-  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET $OPENGL glu glew"
+  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET $OPENGL glu"
   KODI_OPENGL="--enable-gl"
 else
   KODI_OPENGL="--disable-gl"
@@ -236,7 +236,7 @@ export PYTHON_SITE_PKG="$SYSROOT_PREFIX/usr/lib/python$PYTHON_VERSION/site-packa
 export ac_python_version="$PYTHON_VERSION"
 
 PKG_CONFIGURE_OPTS_TARGET="gl_cv_func_gettimeofday_clobber=no \
-                           ac_cv_lib_bluetooth_hci_devid=no \
+                           --disable-libbluetooth \
                            --disable-debug \
                            --disable-optimizations \
                            $KODI_OPENGL \
