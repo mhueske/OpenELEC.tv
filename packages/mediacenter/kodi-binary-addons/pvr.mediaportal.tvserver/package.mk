@@ -17,7 +17,7 @@
 ################################################################################
 
 PKG_NAME="pvr.mediaportal.tvserver"
-PKG_VERSION="58a3d3d"
+PKG_VERSION="f146bc7"
 PKG_REV="1"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
