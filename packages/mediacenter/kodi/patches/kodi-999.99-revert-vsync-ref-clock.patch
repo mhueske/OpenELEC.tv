@@ -1,0 +1,221 @@
+From e7eec84860f0486f779cb1871930ae464c6581f0 Mon Sep 17 00:00:00 2001
+From: Matus Kral <matuskral@me.com>
+Date: Sat, 6 Jun 2015 21:49:10 +0200
+Subject: [PATCH] [IMX] Add vsync ref clock
+
+---
+ xbmc/video/VideoReferenceClock.cpp    |   4 ++
+ xbmc/video/videosync/Makefile         |   3 +-
+ xbmc/video/videosync/VideoSyncIMX.cpp | 115 ++++++++++++++++++++++++++++++++++
+ xbmc/video/videosync/VideoSyncIMX.h   |  42 +++++++++++++
+ 4 files changed, 163 insertions(+), 1 deletion(-)
+ create mode 100644 xbmc/video/videosync/VideoSyncIMX.cpp
+ create mode 100644 xbmc/video/videosync/VideoSyncIMX.h
+
+diff --git a/xbmc/video/VideoReferenceClock.cpp b/xbmc/video/VideoReferenceClock.cpp
+index bb195db..d78caa5 100644
+--- a/xbmc/video/VideoReferenceClock.cpp
++++ b/xbmc/video/VideoReferenceClock.cpp
+@@ -36,6 +36,8 @@
+ #include "windowing/WindowingFactory.h"
+ #elif defined(TARGET_RASPBERRY_PI)
+ #include "video/videosync/VideoSyncPi.h"
++#elif defined(HAS_IMXVPU)
++#include "video/videosync/VideoSyncIMX.h"
+ #endif
+ #if defined(TARGET_WINDOWS)
+ #include "video/videosync/VideoSyncD3D.h"
+@@ -120,6 +122,8 @@ void CVideoReferenceClock::Process()
+     m_pVideoSync = new CVideoSyncIos();
+ #elif defined(TARGET_RASPBERRY_PI)
+     m_pVideoSync = new CVideoSyncPi();
++#elif defined(HAS_IMXVPU)
++    m_pVideoSync = new CVideoSyncIMX();
+ #endif
+ 
+     if (m_pVideoSync)
+diff --git a/xbmc/video/videosync/Makefile b/xbmc/video/videosync/Makefile
+index 04184a9..a4fb395 100644
+--- a/xbmc/video/videosync/Makefile
++++ b/xbmc/video/videosync/Makefile
+@@ -3,8 +3,9 @@ SRCS=VideoSyncGLX.cpp \
+      VideoSyncIos.cpp \
+      VideoSyncDRM.cpp \
+      VideoSyncPi.cpp \
++     VideoSyncIMX.cpp \
+ 
+ LIB=videosync.a
+ 
+ include ../../../Makefile.include
+--include $(patsubst %.cpp,%.P,$(patsubst %.c,%.P,$(SRCS)))
+\ No newline at end of file
++-include $(patsubst %.cpp,%.P,$(patsubst %.c,%.P,$(SRCS)))
+diff --git a/xbmc/video/videosync/VideoSyncIMX.cpp b/xbmc/video/videosync/VideoSyncIMX.cpp
+new file mode 100644
+index 0000000..c06e49d
+--- /dev/null
++++ b/xbmc/video/videosync/VideoSyncIMX.cpp
+@@ -0,0 +1,115 @@
++/*
++ *      Copyright (C) 2005-2014 Team XBMC
++ *      http://xbmc.org
++ *
++ *  This Program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2, or (at your option)
++ *  any later version.
++ *
++ *  This Program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with XBMC; see the file COPYING.  If not, see
++ *  <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#include "system.h"
++
++#if defined(HAS_IMXVPU)
++
++#include "video/videosync/VideoSyncIMX.h"
++#include "guilib/GraphicContext.h"
++#include "windowing/WindowingFactory.h"
++#include "utils/TimeUtils.h"
++#include "utils/log.h"
++#include <linux/mxcfb.h>
++
++/*
++ *  official imx6 -SR tree
++ *  https://github.com/SolidRun/linux-fslc.git
++ *
++ */
++
++#include <linux/mxc_dcic.h>
++
++#include <sys/ioctl.h>
++
++CVideoSyncIMX::CVideoSyncIMX()
++{
++  m_fddcic = open("/dev/mxc_dcic0", O_RDWR);
++}
++
++CVideoSyncIMX::~CVideoSyncIMX()
++{
++  if (m_fddcic > 0)
++    close(m_fddcic);
++}
++
++bool CVideoSyncIMX::Setup(PUPDATECLOCK func)
++{
++  struct fb_var_screeninfo screen_info;
++
++  UpdateClock = func;
++  m_abort = false;
++
++  if (m_fddcic < 0)
++    return false;
++
++  int fb0 = open("/dev/fb0", O_RDONLY | O_NONBLOCK);
++  if (fb0 < 0)
++    return false;
++
++  bool bContinue = !ioctl(fb0, FBIOGET_VSCREENINFO, &screen_info);
++  if (bContinue)
++    bContinue = !ioctl(m_fddcic, DCIC_IOC_CONFIG_DCIC, &screen_info.sync);
++
++  close(fb0);
++  if (!bContinue)
++    return false;
++
++  g_Windowing.Register(this);
++  CLog::Log(LOGDEBUG, "CVideoReferenceClock: setting up IMX");
++  return true;
++}
++
++void CVideoSyncIMX::Run(volatile bool& stop)
++{
++  unsigned long counter;
++  unsigned long last = 0;
++
++  ioctl(m_fddcic, DCIC_IOC_START_VSYNC, 0);
++  while (!stop && !m_abort)
++  {
++    read(m_fddcic, &counter, sizeof(unsigned long));
++    uint64_t now = CurrentHostCounter();
++
++    UpdateClock((unsigned int)(counter - last), now);
++    last = counter;
++  }
++  ioctl(m_fddcic, DCIC_IOC_STOP_VSYNC, 0);
++}
++
++void CVideoSyncIMX::Cleanup()
++{
++  CLog::Log(LOGDEBUG, "CVideoReferenceClock: cleaning up IMX");
++  g_Windowing.Unregister(this);
++}
++
++float CVideoSyncIMX::GetFps()
++{
++  m_fps = g_graphicsContext.GetFPS();
++  CLog::Log(LOGDEBUG, "CVideoReferenceClock: fps: %.3f", m_fps);
++  return m_fps;
++}
++
++void CVideoSyncIMX::OnResetDisplay()
++{
++  m_abort = true;
++}
++
++#endif
+diff --git a/xbmc/video/videosync/VideoSyncIMX.h b/xbmc/video/videosync/VideoSyncIMX.h
+new file mode 100644
+index 0000000..16b7b76
+--- /dev/null
++++ b/xbmc/video/videosync/VideoSyncIMX.h
+@@ -0,0 +1,42 @@
++#pragma once
++/*
++ *      Copyright (C) 2005-2014 Team XBMC
++ *      http://xbmc.org
++ *
++ *  This Program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2, or (at your option)
++ *  any later version.
++ *
++ *  This Program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with XBMC; see the file COPYING.  If not, see
++ *  <http://www.gnu.org/licenses/>.
++ *
++ */
++
++#if defined(HAS_IMXVPU)
++
++#include "video/videosync/VideoSync.h"
++#include "guilib/DispResource.h"
++
++class CVideoSyncIMX : public CVideoSync, IDispResource
++{
++public:
++  CVideoSyncIMX();
++  virtual ~CVideoSyncIMX();
++  virtual bool Setup(PUPDATECLOCK func);
++  virtual void Run(volatile bool& stop);
++  virtual void Cleanup();
++  virtual float GetFps();
++  virtual void OnResetDisplay();
++private:
++  volatile bool m_abort;
++  int m_fddcic;
++};
++
++#endif
