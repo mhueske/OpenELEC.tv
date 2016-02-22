@@ -17,7 +17,7 @@
 ################################################################################
 
 PKG_NAME="audiodecoder.stsound"
-PKG_VERSION="7cc6fe7"
+PKG_VERSION="ce7f50a"
 PKG_REV="1"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"

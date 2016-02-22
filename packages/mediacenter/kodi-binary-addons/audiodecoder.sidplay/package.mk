@@ -17,7 +17,7 @@
 ################################################################################
 
 PKG_NAME="audiodecoder.sidplay"
-PKG_VERSION="92f90a8"
+PKG_VERSION="ae55cf0"
 PKG_REV="1"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
