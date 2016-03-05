@@ -23,7 +23,7 @@ PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
 PKG_URL="$DISTRO_SRC/$PKG_NAME-$PKG_VERSION.tar.xz"
-PKG_DEPENDS_TARGET="toolchain kodi:host libsquish Python zlib bzip2 systemd pciutils lzo pcre swig:host libass curl rtmpdump fontconfig fribidi tinyxml libjpeg-turbo libpng freetype libogg libcdio taglib libxml2 libxslt yajl sqlite libvorbis ffmpeg crossguid giflib"
+PKG_DEPENDS_TARGET="toolchain kodi:host Python zlib bzip2 systemd pciutils lzo pcre swig:host libass curl rtmpdump fontconfig fribidi tinyxml libjpeg-turbo libpng freetype libogg libcdio taglib libxml2 libxslt yajl sqlite libvorbis ffmpeg crossguid giflib"
 PKG_DEPENDS_HOST="lzo:host libpng:host libjpeg-turbo:host giflib:host"
 PKG_PRIORITY="optional"
 PKG_SECTION="mediacenter"
@@ -229,13 +229,15 @@ export CXXFLAGS_FOR_BUILD="$HOST_CXXFLAGS"
 export CFLAGS_FOR_BUILD="$HOST_CFLAGS"
 export LDFLAGS_FOR_BUILD="$HOST_LDFLAGS"
 
-export PYTHON_VERSION="2.7"
-export PYTHON_CPPFLAGS="-I$SYSROOT_PREFIX/usr/include/python$PYTHON_VERSION"
-export PYTHON_LDFLAGS="-L$SYSROOT_PREFIX/usr/lib/python$PYTHON_VERSION -lpython$PYTHON_VERSION"
-export PYTHON_SITE_PKG="$SYSROOT_PREFIX/usr/lib/python$PYTHON_VERSION/site-packages"
-export ac_python_version="$PYTHON_VERSION"
+export PYTHON_CPPFLAGS="-I$SYSROOT_PREFIX/usr/include/python2.7"
+export PYTHON_LDFLAGS="-L$SYSROOT_PREFIX/usr/lib/python2.7 -lpython2.7"
+export PYTHON_SITE_PKG="$SYSROOT_PREFIX/usr/lib/python2.7/site-packages"
 
 PKG_CONFIGURE_OPTS_TARGET="gl_cv_func_gettimeofday_clobber=no \
+<<<<<<< HEAD
+=======
+                           ac_python_version=2.7 \
+>>>>>>> 408d45a42b1051e2d3a4d8e9d3453b47d337849b
                            --disable-libbluetooth \
                            --disable-debug \
                            --disable-optimizations \
@@ -280,8 +282,11 @@ PKG_CONFIGURE_OPTS_TARGET="gl_cv_func_gettimeofday_clobber=no \
 
 pre_configure_host() {
 # kodi fails to build in subdirs
-  cd $ROOT/$PKG_BUILD
-    rm -rf .$HOST_NAME
+  rm -rf $PKG_BUILD/.$TARGET_NAME
+}
+
+configure_host() {
+  : # not needed
 }
 
 make_host() {
@@ -297,17 +302,13 @@ makeinstall_host() {
 
 pre_build_target() {
 # adding fake Makefile for stripped skin
-  mkdir -p $PKG_BUILD/addons/skin.confluence/media
-  touch $PKG_BUILD/addons/skin.confluence/media/Makefile.in
-
-# autoreconf
-  BOOTSTRAP_STANDALONE=1 make -C $PKG_BUILD -f bootstrap.mk
+  mkdir -p $PKG_BUILD/addons/skin.estuary/media
+  touch $PKG_BUILD/addons/skin.estuary/media/Makefile.in
 }
 
 pre_configure_target() {
 # kodi fails to build in subdirs
-  cd $ROOT/$PKG_BUILD
-    rm -rf .$TARGET_NAME
+  rm -rf $PKG_BUILD/.$TARGET_NAME
 
 # kodi should never be built with lto
   strip_lto
@@ -317,6 +318,9 @@ pre_configure_target() {
   export LIBS="$LIBS -lz"
 
   export JSON_BUILDER=$ROOT/$TOOLCHAIN/bin/JsonSchemaBuilder
+
+# autoreconf
+  BOOTSTRAP_STANDALONE=1 make -f bootstrap.mk
 }
 
 make_target() {
@@ -324,8 +328,8 @@ make_target() {
   SKIN_DIR="skin.`tolower $SKIN_DEFAULT`"
 
 # setup default skin inside the sources
-  sed -i -e "s|skin.confluence|$SKIN_DIR|g" $ROOT/$PKG_BUILD/xbmc/settings/Settings.h
-  sed -i -e "s|skin.confluence|$SKIN_DIR|g" $ROOT/$PKG_BUILD/system/settings/settings.xml
+  sed -i -e "s|skin.estuary|$SKIN_DIR|g" $ROOT/$PKG_BUILD/xbmc/system.h
+  sed -i -e "s|skin.estuary|$SKIN_DIR|g" $ROOT/$PKG_BUILD/system/settings/settings.xml
 
   make externals
   make kodi.bin
@@ -341,9 +345,11 @@ post_makeinstall_target() {
   rm -rf $INSTALL/usr/bin/xbmc
   rm -rf $INSTALL/usr/bin/xbmc-standalone
   rm -rf $INSTALL/usr/lib/kodi/*.cmake
-
-  # more binaddons cross compile badness meh
-  sed -i -e "s:INCLUDE_DIR /usr/include/kodi:INCLUDE_DIR $SYSROOT_PREFIX/usr/include/kodi:g" $SYSROOT_PREFIX/usr/lib/kodi/kodi-config.cmake
+  rm -rf $INSTALL/usr/share/applications
+  rm -rf $INSTALL/usr/share/icons
+  rm -rf $INSTALL/usr/share/kodi/addons/service.xbmc.versioncheck
+  rm -rf $INSTALL/usr/share/kodi/addons/visualization.vortex
+  rm -rf $INSTALL/usr/share/xsessions
 
   mkdir -p $INSTALL/usr/lib/kodi
     cp $PKG_DIR/scripts/kodi-config $INSTALL/usr/lib/kodi
@@ -361,12 +367,6 @@ post_makeinstall_target() {
   if [ ! "$DISPLAYSERVER" = "x11" ]; then
     rm -rf $INSTALL/usr/lib/kodi/kodi-xrandr
   fi
-
-  rm -rf $INSTALL/usr/share/applications
-  rm -rf $INSTALL/usr/share/icons
-  rm -rf $INSTALL/usr/share/kodi/addons/service.xbmc.versioncheck
-  rm -rf $INSTALL/usr/share/kodi/addons/visualization.vortex
-  rm -rf $INSTALL/usr/share/xsessions
 
   mkdir -p $INSTALL/usr/share/kodi/addons
     cp -R $PKG_DIR/config/os.openelec.tv $INSTALL/usr/share/kodi/addons
@@ -403,6 +403,20 @@ post_makeinstall_target() {
     else
       cp $PKG_DIR/config/appliance.xml $INSTALL/usr/share/kodi/system/settings
     fi
+
+  # update addon manifest
+  xmlstarlet ed -L -d "/addons/addon[text()='service.xbmc.versioncheck']" \
+    $INSTALL/usr/share/kodi/system/addon-manifest.xml || :
+  xmlstarlet ed -L --subnode "/addons" -t elem -n "addon" -v "os.openelec.tv" \
+    $INSTALL/usr/share/kodi/system/addon-manifest.xml || :
+  xmlstarlet ed -L --subnode "/addons" -t elem -n "addon" -v "repository.openelec.tv" \
+    $INSTALL/usr/share/kodi/system/addon-manifest.xml || :
+  xmlstarlet ed -L --subnode "/addons" -t elem -n "addon" -v "service.openelec.settings" \
+    $INSTALL/usr/share/kodi/system/addon-manifest.xml || :
+
+  # more binaddons cross compile badness meh
+    sed -i -e "s:INCLUDE_DIR /usr/include/kodi:INCLUDE_DIR $SYSROOT_PREFIX/usr/include/kodi:g" $SYSROOT_PREFIX/usr/lib/kodi/kodi-config.cmake
+
 
   if [ "$KODI_EXTRA_FONTS" = yes ]; then
     mkdir -p $INSTALL/usr/share/kodi/media/Fonts
