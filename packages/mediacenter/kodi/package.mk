@@ -234,10 +234,7 @@ export PYTHON_LDFLAGS="-L$SYSROOT_PREFIX/usr/lib/python2.7 -lpython2.7"
 export PYTHON_SITE_PKG="$SYSROOT_PREFIX/usr/lib/python2.7/site-packages"
 
 PKG_CONFIGURE_OPTS_TARGET="gl_cv_func_gettimeofday_clobber=no \
-<<<<<<< HEAD
-=======
                            ac_python_version=2.7 \
->>>>>>> 408d45a42b1051e2d3a4d8e9d3453b47d337849b
                            --disable-libbluetooth \
                            --disable-debug \
                            --disable-optimizations \
