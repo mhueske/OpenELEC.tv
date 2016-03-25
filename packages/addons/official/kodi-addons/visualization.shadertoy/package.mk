@@ -16,24 +16,27 @@
 #  along with OpenELEC.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-PKG_NAME="audiodecoder.usf"
-PKG_VERSION="47bc588"
+PKG_NAME="visualization.shadertoy"
+PKG_VERSION="5b64785"
 PKG_REV="1"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
-PKG_SITE="https://github.com/notspiff/audiodecoder.usf"
-PKG_GIT_URL="https://github.com/notspiff/audiodecoder.usf"
+PKG_SITE="https://github.com/notspiff/visualization.shadertoy"
+PKG_GIT_URL="https://github.com/notspiff/visualization.shadertoy"
 PKG_GIT_BRANCH="master"
-PKG_DEPENDS_TARGET="toolchain kodi-platform"
+PKG_DEPENDS_TARGET="toolchain kodi-platform glew"
 PKG_PRIORITY="optional"
 PKG_SECTION=""
-PKG_SHORTDESC="audiodecoder.usf"
-PKG_LONGDESC="audiodecoder.usf"
+PKG_SHORTDESC="visualization.shadertoy"
+PKG_LONGDESC="visualization.shadertoy"
 PKG_AUTORECONF="no"
 
 PKG_IS_ADDON="yes"
-PKG_ADDON_TYPE="kodi.audiodecoder"
-PKG_ADDON_PROJECTS="Generic Nvidia_Legacy RPi2 imx6 WeTek_Play"
+PKG_ADDON_TYPE="xbmc.player.musicviz"
+
+if [ "$OPENGL" = "no" ] ; then
+  exit 0
+fi
 
 configure_target() {
   cmake -DCMAKE_TOOLCHAIN_FILE=$CMAKE_CONF \
