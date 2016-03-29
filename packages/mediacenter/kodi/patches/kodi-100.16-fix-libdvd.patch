@@ -5,7 +5,7 @@ diff -Naur a/Makefile.in b/Makefile.in
  
  DVDPCODECS_DIRS= \
  	lib \
--	lib/libdvd 
+-	lib/libdvd
  
  VideoPlayer_ARCHIVES=xbmc/cores/VideoPlayer/VideoPlayer.a \
                     xbmc/cores/VideoPlayer/DVDCodecs/DVDCodecs.a \
