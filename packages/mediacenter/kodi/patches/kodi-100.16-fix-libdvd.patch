@@ -9,7 +9,7 @@ diff -Naur a/Makefile.in b/Makefile.in
  
  VideoPlayer_ARCHIVES=xbmc/cores/VideoPlayer/VideoPlayer.a \
                     xbmc/cores/VideoPlayer/DVDCodecs/DVDCodecs.a \
-@@ -322,7 +321,6 @@
+@@ -324,7 +323,6 @@
  	$(MAKE) -C lib/addons/library.kodi.guilib
  	$(MAKE) -C lib/addons/library.xbmc.pvr
  dvdpcodecs: dllloader
